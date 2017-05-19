@@ -116,8 +116,20 @@ Each EsIndexable model receive an Elasticsearch class that contains its options 
     The fields to be indexed by elasticsearch, if left to None, all models fields will be indexed.
 
 * **exclude_fields**  
-    Defaults to None
-    Exclude those fields, if left to None, exclude is disabled.
+    Defaults to None  
+    Exclude those fields to index, if left to None, exclude is disabled.
+    Example:  
+    
+    ```python
+    MyModel(EsIndexable, models.Model):
+        useful_for_search = models.CharField(max_length=64)
+        no_use_for_search = models.CharField(max_length=64)
+        
+        class Elasticsearch(EsIndexable.Elasticsearch):
+            fields = ['useful_for_search']
+            exclude_fields = {'no_use_for_search',} #allow set, list, tuple. set is the best.
+    ```
+
 
 * **mappings**  
     Defaults to None  
