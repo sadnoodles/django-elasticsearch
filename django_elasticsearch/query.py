@@ -129,7 +129,7 @@ class EsQueryset(QuerySet):
             fuzziness = self.fuzziness
 
         if self._query:
-            search['query'] = {
+            search['must'] = {
                 'match': {
                     '_all': {
                         'query': self._query,
@@ -165,13 +165,15 @@ class EsQueryset(QuerySet):
                     filtr = {'bool': {'must': [{'term': {field_name: value}}]}}
 
                 elif operator == 'not':
-                    filtr = {'bool': {'must_not': [{'term': {field_name: value}}]}}
+                    filtr = {'bool': {'must_not': [
+                        {'term': {field_name: value}}]}}
 
                 elif operator == 'should':
-                    filtr = {'bool': {operator: [{'term': {field_name: value}}]}}
+                    filtr = {
+                        'bool': {operator: [{'term': {field_name: value}}]}}
 
                 elif operator == 'contains':
-                    filtr = {'query': {'match': {field_name: {'query': value}}}}
+                    filtr = {'must': {'match': {field_name: {'query': value}}}}
 
                 elif operator in ['gt', 'gte', 'lt', 'lte']:
                     filtr = {'bool': {'must': [{'range': {field_name: {
@@ -190,7 +192,7 @@ class EsQueryset(QuerySet):
 
                 nested_update(search['filter'], filtr)
 
-            body['query'] = {'filtered': search}
+            body['query'] = {'bool': search}
         else:
             body = search
 
@@ -216,7 +218,7 @@ class EsQueryset(QuerySet):
         if self.facets_fields:
             aggs = dict([
                 (field, {'terms':
-                        {'field': field}})
+                         {'field': field}})
                 for field in self.facets_fields
             ])
             if self.facets_limit:
@@ -261,7 +263,8 @@ class EsQueryset(QuerySet):
             search_params.update(self.mlt_kwargs)
             for param in ['type', 'indices', 'types', 'scroll', 'size', 'from']:
                 if param in search_params:
-                    search_params['search_{0}'.format(param)] = search_params.pop(param)
+                    search_params['search_{0}'.format(
+                        param)] = search_params.pop(param)
             r = es_client.mlt(**search_params)
         else:
             if 'from' in search_params:
@@ -318,7 +321,8 @@ class EsQueryset(QuerySet):
         return clone
 
     def sanitize_lookup(self, lookup):
-        valid_operators = ['exact', 'not', 'should', 'range', 'gt', 'lt', 'gte', 'lte', 'contains', 'isnull']
+        valid_operators = ['exact', 'not', 'should', 'range',
+                           'gt', 'lt', 'gte', 'lte', 'contains', 'isnull']
         words = lookup.split('__')
         fields = [word for word in words if word not in valid_operators]
         # this is also django's default lookup type
@@ -340,17 +344,20 @@ class EsQueryset(QuerySet):
             elif operator == 'not':
                 filters[field] = value
             elif operator in ['gt', 'gte', 'lt', 'lte']:
-                inverse_map = {'gt': 'lte', 'gte': 'lt', 'lt': 'gte', 'lte': 'gt'}
-                filters['{0}__{1}'.format(field, inverse_map[operator])] = value
+                inverse_map = {'gt': 'lte', 'gte': 'lt',
+                               'lt': 'gte', 'lte': 'gt'}
+                filters['{0}__{1}'.format(
+                    field, inverse_map[operator])] = value
             elif operator == 'isnull':
                 filters[lookup] = not value
             else:
-                raise NotImplementedError("{0} is not a valid *exclude* lookup type.".format(operator))
+                raise NotImplementedError(
+                    "{0} is not a valid *exclude* lookup type.".format(operator))
 
         clone.filters.update(filters)
         return clone
 
-    ## getters
+    # getters
     def all(self):
         clone = self._clone()
         return clone
@@ -363,7 +370,8 @@ class EsQueryset(QuerySet):
             pk = self.filters.get('pk', None) or self.filters.get('id', None)
 
         if pk is None:
-            raise AttributeError("EsQueryset.get needs to get passed a 'pk' or 'id' parameter.")
+            raise AttributeError(
+                "EsQueryset.get needs to get passed a 'pk' or 'id' parameter.")
 
         r = es_client.get(index=self.index,
                           doc_type=self.doc_type,
@@ -388,7 +396,7 @@ class EsQueryset(QuerySet):
                                      "completion": {
                                          "field": field_name,
                                          # stick to fuzziness settings
-                                         "fuzzy" : {}
+                                         "fuzzy": {}
                                      }}})
 
         return [r['text'] for r in resp[field_name][0]['options']]
@@ -438,4 +446,5 @@ class EsQueryset(QuerySet):
         return clone
 
     def prefetch_related(self):
-        raise NotImplementedError(".prefetch_related is not available for an EsQueryset.")
+        raise NotImplementedError(
+            ".prefetch_related is not available for an EsQueryset.")
