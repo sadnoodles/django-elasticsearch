@@ -239,8 +239,19 @@ class EsQueryset(QuerySet):
             body['suggest'] = suggest
 
         if self.ordering:
-            body['sort'] = [{f: "asc"} if f[0] != '-' else {f[1:]: "desc"}
-                            for f in self.ordering] + ["_score"]
+            ordering = []
+            for f in self.ordering:
+                DESC = "asc"
+                if f.startswith('-'):  # reversed
+                    DESC = "desc"
+                    f = f[1:]
+
+                if f == 'pk':  # replace pk
+                    f = self.model._meta.pk.name
+
+                ordering.append({f: DESC})
+
+            body['sort'] = ordering + ["_score"]
 
         search_params = {
             'index': self.index,
